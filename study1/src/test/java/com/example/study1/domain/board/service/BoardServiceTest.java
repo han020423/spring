@@ -57,10 +57,9 @@ class BoardServiceTest {
 
         boardService.createBoard(boardCreateRequestDto);
 
-        Long boardId = 1L;
-        Board board = boardRepository.findById(boardId).orElseThrow();
+        Board savedBoard = boardRepository.findAll().get(0);
 
-        assertThat(board)
+        assertThat(savedBoard)
                 .extracting(Board::getTitle, Board::getContent)
                 .containsExactly(title, content);
     }
@@ -80,13 +79,14 @@ class BoardServiceTest {
         boardRepository.save(board);
 
         //when
+        boardService.getBoard(board.getId());
         BoardResponseDto result = boardService.getBoard(board.getId());
 
         //then
         assertThat(result.title()).isEqualTo("조회 테스트");
         assertThat(result.content()).isEqualTo("내용 테스트");
         assertThat(result.writer()).isEqualTo(member.getUsername());
-        assertThat(result.viewCount()).isEqualTo(1);
+        assertThat(result.viewCount()).isEqualTo(2);
     }
     @DisplayName("게시긓 작성자가 요청시 게시글을 삭제한다.")
     @Test
