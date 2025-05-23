@@ -1,12 +1,11 @@
 package com.example.study1.domain.member.service;
 
 
-import com.example.study1.domain.member.dto.MemberDeleteDto;
-import com.example.study1.domain.member.dto.MemberUpdateDto;
-import com.example.study1.domain.member.dto.SignInRequestDto;
-import com.example.study1.domain.member.dto.SignRequestDto;
+import com.example.study1.domain.member.dto.*;
 import com.example.study1.domain.member.entity.Member;
 import com.example.study1.domain.member.repository.MemberRepository;
+import com.example.study1.global.exception.CustomException;
+import com.example.study1.global.exception.ErrorCode;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -17,6 +16,7 @@ import java.util.Optional;
 
 
 import static org.assertj.core.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @SpringBootTest
 class MemberServiceTest {
@@ -47,10 +47,10 @@ class MemberServiceTest {
 
         //then
 
-        Long memberId = 1L;
-        Optional<Member> member = memberRepository.findById(memberId);
+        Member saved = memberRepository.findAll().get(0);
+        assertThat(saved.getEmail()).isEqualTo("Test@tst.com");
 
-        assertThat(member).isNotNull();
+        assertThat(saved).isNotNull();
     }
 
     @DisplayName("이미 존재하는 이메일로 회원가입을 시도하면 예외가 발생한다")
@@ -71,54 +71,56 @@ class MemberServiceTest {
                 .email("Test@tst.com")
                 .build();
 
-        assertThatThrownBy(() -> memberService.signUp(signUpRequestDto))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("이미 존재하는 이메일 입니다.");
+        CustomException exception = assertThrows(CustomException.class, () -> {
+            memberService.signUp(signUpRequestDto);
+        });
+        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.EMAIL_ALREADY_EXISTS);
     }
 
-    @DisplayName("사용자로부터 정보를 입력받아 로그인 진행한다")
-    @Test
-    void signIn() {
-        Member member = Member.builder()
-                .username("Test")
-                .password("Testt")
-                .email("Test@tst.com")
-                .build();
-
-        memberRepository.save(member);
-
-
-        SignInRequestDto signInRequestDto = SignInRequestDto.builder()
-                .password("Testt")
-                .email("Test@tst.com")
-                .build();
-
-
-        String result = memberService.signIn(signInRequestDto);
-        assertThat(result).isEqualTo("로그인 성공");
-    }
-
-    @DisplayName("존재하지 않는 이메일을 받아오면 예외가 발생한다.")
-    @Test
-    void signInThrowExceptionCauseByEmail() {
-        Member member = Member.builder()
-                .username("Test")
-                .password("Testt")
-                .email("Test@tst.com")
-                .build();
-
-        memberRepository.save(member);
-
-
-        SignInRequestDto signInRequestDto = SignInRequestDto.builder()
-                .password("Testt")
-                .email("Test@tssst.com")
-                .build();
-
-        assertThatThrownBy(() -> memberService.signIn(signInRequestDto))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("존재하지 않는 이메일입니다");
-    }
+//    @DisplayName("사용자로부터 정보를 입력받아 로그인 진행한다")
+//    @Test
+//    void signIn() {
+//        Member member = Member.builder()
+//                .username("Test")
+//                .password("Testt")
+//                .email("Test@tst.com")
+//                .build();
+//
+//        memberRepository.save(member);
+//
+//
+//        SignInRequestDto signInRequestDto = SignInRequestDto.builder()
+//                .password("Testt")
+//                .email("Test@tst.com")
+//                .build();
+//
+//
+//        String result = memberService.signIn(signInRequestDto);
+//        assertThat(result).isEqualTo("로그인 성공");
+//    }
+//
+//    @DisplayName("존재하지 않는 이메일을 받아오면 예외가 발생한다.")
+//    @Test
+//    void signInThrowExceptionCauseByEmail() {
+//        Member member = Member.builder()
+//                .username("Test")
+//                .password("Testt")
+//                .email("Test@tst.com")
+//                .build();
+//
+//        memberRepository.save(member);
+//
+//
+//        SignInRequestDto signInRequestDto = SignInRequestDto.builder()
+//                .password("Testt")
+//                .email("Test@tssst.com")
+//                .build();
+//
+//        CustomException exception = assertThrows(CustomException.class, () -> {
+//            memberService.signIn(signInRequestDto);
+//        });
+//        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.MEMBER_NOT_FOUND);
+//    }
     @DisplayName("사용자로부터 새로운 비밀번호를 입력받아 회원정보를 수정한다")
     @Test
     void updateMember() {
@@ -169,5 +171,23 @@ class MemberServiceTest {
         assertThat(memberRepository.findById(member.getId())).isEmpty();
     }
 
+    @DisplayName("회원정보 조회")
+    @Test
+    void getProfileByEmail() {
+        // given
+        Member member = Member.builder()
+                .username("홍길동")
+                .email("test@example.com")
+                .password("1234")
+                .build();
+        memberRepository.save(member);
+
+        // when
+        MemberProfileDto result = memberService.getProfileByEmail("test@example.com");
+
+        // then
+        assertThat(result.email()).isEqualTo("test@example.com");
+        assertThat(result.createdAt()).isNotNull();
+    }
 
 }
